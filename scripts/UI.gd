@@ -13,6 +13,7 @@ var btn_item: Button
 var btn_stairs: Button
 var btn_auto: Button
 var btn_menu: Button
+var _status_connected: bool = false
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -98,6 +99,18 @@ func _ready() -> void:
 	_layout_bottom_panel()
 	get_viewport().size_changed.connect(_on_viewport_resized)
 
+	update_status()
+	set_process(true) # main/status がセットされ次第、シグナル接続する
+
+func _process(delta: float) -> void:
+	if not _status_connected and main != null and main.status != null:
+		if not main.status.is_connected("stats_changed", Callable(self, "_on_stats_changed")):
+			main.status.stats_changed.connect(_on_stats_changed)
+		_status_connected = true
+		update_status()
+		set_process(false)
+
+func _on_stats_changed() -> void:
 	update_status()
 
 func _on_viewport_resized() -> void:

@@ -4,7 +4,7 @@ class_name Inventory
 signal pouch_toggled(open: bool, id: int)
 
 var main: Node
-var status: Node
+var status: Status
 
 # 装備
 var equip_weapon: Dictionary = {}
@@ -121,7 +121,6 @@ func create_enhance_seal() -> Dictionary:
 func create_expand_seal() -> Dictionary:
 	return item_factory.create_expand_seal(self)
 
-# ★ 家具
 func create_furniture() -> Dictionary:
 	return item_factory.create_furniture(self)
 
@@ -226,6 +225,7 @@ func _apply_unequip_effect(slot: String) -> void:
 	elif slot == "shield":
 		status.def -= equip_shield_bonus_def
 		equip_shield_bonus_def = 0
+	status.stats_changed.emit()
 
 func _apply_equip_effect(item: Dictionary) -> void:
 	var t: String = item.get("type", "")
@@ -239,6 +239,7 @@ func _apply_equip_effect(item: Dictionary) -> void:
 		var plus2: int = int(item.get("plus", 0))
 		equip_shield_bonus_def = base2 + plus2
 		status.def += equip_shield_bonus_def
+	status.stats_changed.emit()
 
 func equip_from_bag(item_id: int) -> bool:
 	if not bag_items.has(item_id):
@@ -307,12 +308,14 @@ func use_item_from_bag(item_id: int) -> bool:
 		var heal: int = int(it.get("heal", 0))
 		if heal > 0:
 			status.hp = min(status.max_hp, status.hp + heal)
+			status.stats_changed.emit()
 		remove_item_from_bag(item_id)
 		return true
 	if t == "food":
 		var gain: int = int(it.get("belly", 0))
 		if gain > 0:
 			status.belly = min(status.belly_max, status.belly + gain)
+			status.stats_changed.emit()
 		remove_item_from_bag(item_id)
 		return true
 	if t == "pouch":
@@ -361,12 +364,14 @@ func use_item_from_pouch(pouch_id: int, item_id: int) -> bool:
 		var heal: int = int(it.get("heal", 0))
 		if heal > 0:
 			status.hp = min(status.max_hp, status.hp + heal)
+			status.stats_changed.emit()
 		pouch_remove_item(pouch_id, item_id)
 		return true
 	if t == "food":
 		var gain: int = int(it.get("belly", 0))
 		if gain > 0:
 			status.belly = min(status.belly_max, status.belly + gain)
+			status.stats_changed.emit()
 		pouch_remove_item(pouch_id, item_id)
 		return true
 	if t == "seal":

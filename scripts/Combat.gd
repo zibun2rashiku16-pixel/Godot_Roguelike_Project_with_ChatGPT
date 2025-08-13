@@ -12,10 +12,10 @@ func _enemy_index_at(pos: Vector2i) -> int:
 			return i
 	return -1
 
-func _is_adjacent_4(a: Vector2i, b: Vector2i) -> bool:
+func _is_adjacent_8(a: Vector2i, b: Vector2i) -> bool:
 	var dx: int = abs(a.x - b.x)
 	var dy: int = abs(a.y - b.y)
-	return (dx + dy) == 1
+	return dx <= 1 and dy <= 1 and (dx != 0 or dy != 0)
 
 # プレイヤーが敵 idx を攻撃。行動消費なら true。
 func player_attack(idx: int) -> bool:
@@ -47,8 +47,8 @@ func player_attack(idx: int) -> bool:
 		main.recalc_memory_visible()
 		return true
 
-	# 生存していれば即時反撃（隣接時のみ）
-	if _is_adjacent_4(pos, main.player):
+	# 生存していれば即時反撃（8方向隣接を許可）
+	if _is_adjacent_8(pos, main.player):
 		enemy_attack_player(idx)
 
 	# HP 反映（辞書は参照だが明示更新）
@@ -59,7 +59,7 @@ func player_attack(idx: int) -> bool:
 # - int       : 敵インデックス
 # - Vector2i  : 敵の座標
 # - Dictionary: {pos: Vector2i, ...} を想定
-func enemy_attack(arg) -> bool:
+func enemy_attack(arg: Variant) -> bool:
 	if main == null:
 		return false
 	var idx: int = -1
@@ -91,3 +91,5 @@ func enemy_attack_player(idx: int) -> void:
 	var dmg: int = max(1, atk + jitter)
 	main.status.hp = max(0, main.status.hp - dmg)
 	main.gfx.add_damage_number(main.player, dmg)
+	# ステータス変更の都度 UI 更新を通知
+	main.status.stats_changed.emit()
