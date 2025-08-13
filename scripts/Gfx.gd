@@ -7,6 +7,28 @@ var _off: Vector2 = Vector2.ZERO
 
 var player_tex: Texture2D
 var enemy_tex: Texture2D
+var stairs_tex: Texture2D
+var sword_tex: Texture2D
+var shield_tex: Texture2D
+var herb_tex: Texture2D
+var food_tex: Texture2D
+var seal_tex: Texture2D
+var seal_expand_tex: Texture2D
+var pouch_tex: Texture2D
+var pouch_fusion_tex: Texture2D
+var furniture_tex: Texture2D
+
+# 差し替え可能なパス（エディタから変更可）
+@export var stairs_tex_path: String = "res://assets/stairs.png"
+@export var sword_tex_path: String = "res://assets/sword.png"
+@export var shield_tex_path: String = "res://assets/shield.png"
+@export var herb_tex_path: String = "res://assets/herb.png"
+@export var food_tex_path: String = "res://assets/food.png"
+@export var seal_tex_path: String = "res://assets/seal.png"
+@export var seal_expand_tex_path: String = "res://assets/seal_expand.png"
+@export var pouch_tex_path: String = "res://assets/pouch.png"
+@export var pouch_fusion_tex_path: String = "res://assets/pouch_fusion.png"
+@export var furniture_tex_path: String = "res://assets/furniture.png"
 
 var flash_player: float = 0.0
 var flash_cells: Array = []
@@ -19,12 +41,32 @@ var level_fx: Array = [] # {pos:Vector2i, t:float, dur:float}
 
 func _ready() -> void:
 	set_process(false)
+	# 既存（プレイヤー／敵）は Params 由来
 	var r1: Resource = load(Params.PLAYER_TEXTURE_PATH)
 	if r1 is Texture2D:
 		player_tex = r1 as Texture2D
 	var r2: Resource = load(Params.ENEMY_TEXTURE_PATH)
 	if r2 is Texture2D:
 		enemy_tex = r2 as Texture2D
+	# 新規：アイテム／階段の差し替え可能テクスチャ
+	stairs_tex = _load_tex(stairs_tex_path)
+	sword_tex = _load_tex(sword_tex_path)
+	shield_tex = _load_tex(shield_tex_path)
+	herb_tex = _load_tex(herb_tex_path)
+	food_tex = _load_tex(food_tex_path)
+	seal_tex = _load_tex(seal_tex_path)
+	seal_expand_tex = _load_tex(seal_expand_tex_path)
+	pouch_tex = _load_tex(pouch_tex_path)
+	pouch_fusion_tex = _load_tex(pouch_fusion_tex_path)
+	furniture_tex = _load_tex(furniture_tex_path)
+
+func _load_tex(p: String) -> Texture2D:
+	if p.is_empty():
+		return null
+	var r: Resource = load(p)
+	if r is Texture2D:
+		return r as Texture2D
+	return null
 
 func get_tile_size() -> int:
 	_update_layout_cache()
@@ -139,13 +181,18 @@ func _draw() -> void:
 			if not (vis_row[cell.x] as bool):
 				continue
 			var base: Vector2 = off + Vector2(cell.x * tile, cell.y * tile)
-			var m: float = float(tile) * 0.2
-			var sz: Vector2 = Vector2(float(tile) - m * 2.0, float(tile) - m * 2.0)
-			var ir: Rect2 = Rect2(base + Vector2(m, m), sz)
+			var ir: Rect2 = Rect2(base, Vector2(tile, tile))
 			var it: Dictionary = main.inv.get_ground_top_item(cell)
 			var tname: String = String(it.get("type", ""))
-			var col: Color = _item_color(tname, 1.0)
-			draw_rect(ir, col, true)
+			var tex: Texture2D = _item_texture_for_type(tname)
+			if tex != null:
+				draw_texture_rect(tex, ir, false)
+			else:
+				var m: float = float(tile) * 0.2
+				var sz: Vector2 = Vector2(float(tile) - m * 2.0, float(tile) - m * 2.0)
+				var irc: Rect2 = Rect2(base + Vector2(m, m), sz)
+				var col: Color = _item_color(tname, 1.0)
+				draw_rect(irc, col, true)
 
 	# アイテム（記憶のみ：薄表示）
 	if main.known_item_cells.size() > 0:
@@ -160,21 +207,32 @@ func _draw() -> void:
 			if not (exp_row[cell2.x] as bool):
 				continue
 			var base2: Vector2 = off + Vector2(cell2.x * tile, cell2.y * tile)
-			var m2: float = float(tile) * 0.35
-			var sz2: Vector2 = Vector2(float(tile) - m2 * 2.0, float(tile) - m2 * 2.0)
-			var ir2: Rect2 = Rect2(base2 + Vector2(m2, m2), sz2)
+			var ir2: Rect2 = Rect2(base2, Vector2(tile, tile))
 			var tname2: String = String(main.known_item_cells[cell2])
-			var col2: Color = _item_color(tname2, 0.45)
-			draw_rect(ir2, col2, true)
+			var tex2: Texture2D = _item_texture_for_type(tname2)
+			if tex2 != null:
+				draw_texture_rect(tex2, ir2, false, Color(1.0, 1.0, 1.0, 0.45))
+			else:
+				var m2: float = float(tile) * 0.35
+				var sz2: Vector2 = Vector2(float(tile) - m2 * 2.0, float(tile) - m2 * 2.0)
+				var irc2: Rect2 = Rect2(base2 + Vector2(m2, m2), sz2)
+				var col2: Color = _item_color(tname2, 0.45)
+				draw_rect(irc2, col2, true)
 
 	# 階段
 	if main.stairs.x >= 0 and main.stairs.y >= 0:
 		var sr: Rect2 = Rect2(off + Vector2(main.stairs.x * tile, main.stairs.y * tile), Vector2(tile, tile))
 		var vrow: Array = main.vis_map[main.stairs.y]
 		if vrow[main.stairs.x] as bool:
-			draw_rect(sr, Color(0.6, 0.6, 0.2), true)
+			if stairs_tex != null:
+				draw_texture_rect(stairs_tex, sr, false)
+			else:
+				draw_rect(sr, Color(0.6, 0.6, 0.2), true)
 		elif main.known_stairs_seen:
-			draw_rect(sr, Color(0.6, 0.6, 0.2, 0.4), true)
+			if stairs_tex != null:
+				draw_texture_rect(stairs_tex, sr, false, Color(1.0, 1.0, 1.0, 0.4))
+			else:
+				draw_rect(sr, Color(0.6, 0.6, 0.2, 0.4), true)
 
 	# 敵
 	for e: Dictionary in main.enemies:
@@ -229,6 +287,27 @@ func _draw() -> void:
 	# 8方向ガイド
 	if show_guides:
 		_draw_guides()
+
+func _item_texture_for_type(tname: String) -> Texture2D:
+	if tname == "weapon":
+		return sword_tex
+	if tname == "shield":
+		return shield_tex
+	if tname == "potion":
+		return herb_tex
+	if tname == "food":
+		return food_tex
+	if tname == "seal":
+		return seal_tex
+	if tname == "seal_expand":
+		return seal_expand_tex
+	if tname == "pouch":
+		return pouch_tex
+	if tname == "pouch_fusion":
+		return pouch_fusion_tex
+	if tname == "furniture":
+		return furniture_tex
+	return null
 
 func _item_color(tname: String, alpha: float) -> Color:
 	var col: Color = Color(0.8, 0.8, 0.8, alpha)
@@ -314,7 +393,7 @@ func _draw_guides() -> void:
 	for d: Vector2i in dirs:
 		var last: Vector2i = main.player
 		# 壁に関わらず、最大5マスまで進める（マップ外は停止）
-		for step: int in range(5):
+		for _step: int in range(5):
 			var nx: int = last.x + d.x
 			var ny: int = last.y + d.y
 			if nx < 0 or ny < 0 or nx >= Params.W or ny >= Params.H:

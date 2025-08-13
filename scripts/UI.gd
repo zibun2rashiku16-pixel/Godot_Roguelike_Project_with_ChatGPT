@@ -2,6 +2,7 @@ extends Control
 class_name UI
 
 const RESERVED_MIN_H: int = 320
+const MENU_ID_FURN_ONLY: int = 1
 
 var main: Main
 var root_panel: Panel
@@ -13,6 +14,7 @@ var btn_item: Button
 var btn_stairs: Button
 var btn_auto: Button
 var btn_menu: Button
+var menu: PopupMenu
 var _status_connected: bool = false
 
 func _ready() -> void:
@@ -96,11 +98,17 @@ func _ready() -> void:
 	buttons.add_child(btn_menu)
 	btn_menu.pressed.connect(_on_menu_pressed)
 
+	# メニュー（家具のみ拾うトグル）
+	menu = PopupMenu.new()
+	add_child(menu)
+	menu.add_check_item("家具のみ拾う", MENU_ID_FURN_ONLY)
+	menu.id_pressed.connect(_on_menu_id_pressed)
+
 	_layout_bottom_panel()
 	get_viewport().size_changed.connect(_on_viewport_resized)
 
 	update_status()
-	set_process(true) # main/status がセットされ次第、シグナル接続する
+	set_process(true)
 
 func _process(delta: float) -> void:
 	if not _status_connected and main != null and main.status != null:
@@ -158,5 +166,23 @@ func _on_auto_toggled(t: bool) -> void:
 		main.set_auto_mode(t)
 
 func _on_menu_pressed() -> void:
-	if main != null:
-		main.show_menu_popup()
+	if main == null:
+		return
+	_sync_menu_checks()
+	menu.popup()
+
+func _sync_menu_checks() -> void:
+	if main == null:
+		return
+	menu.set_item_checked(menu.get_item_index(MENU_ID_FURN_ONLY), main.auto_pick_furniture_only)
+
+func _on_menu_id_pressed(id: int) -> void:
+	if main == null:
+		return
+	if id == MENU_ID_FURN_ONLY:
+		main.auto_pick_furniture_only = not main.auto_pick_furniture_only
+		_sync_menu_checks()
+
+func _on_menu_pressed_deprecated() -> void:
+	# 互換用（未使用）
+	pass
