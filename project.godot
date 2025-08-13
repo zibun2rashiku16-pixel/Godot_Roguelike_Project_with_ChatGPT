@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="Godot_Roguelike_Project_with_ChatGPT"
+config/name="Roguelike Portrait Effects"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.4")
 
@@ -19,11 +19,6 @@ config/features=PackedStringArray("4.4")
 window/size/viewport_width=720
 window/size/viewport_height=1280
 window/stretch/mode="canvas_items"
-
-[editor]
-
-version_control/plugin_name="GitPlugin"
-version_control/autoload_on_startup=true
 
 [rendering]
 

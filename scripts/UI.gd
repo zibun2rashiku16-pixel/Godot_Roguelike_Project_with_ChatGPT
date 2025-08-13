@@ -119,9 +119,10 @@ func get_reserved_height() -> int:
 func update_status() -> void:
 	if main == null:
 		return
-	status_label.text = "階: %d    Lv: %d    XP: %d    HP: %d/%d    腹: %d/%d    攻: %d    防: %d" % [
+	var need: int = main.status.get_xp_to_next()
+	status_label.text = "階: %d    Lv: %d    次Lvまで: %d    HP: %d/%d    腹: %d/%d    攻: %d    防: %d" % [
 		main.floor_level,
-		main.status.level, main.status.xp,
+		main.status.level, need,
 		main.status.hp, main.status.max_hp,
 		main.status.belly, main.status.belly_max,
 		main.status.atk, main.status.def

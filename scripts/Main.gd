@@ -29,6 +29,8 @@ var auto_timer: Timer
 var known_item_cells: Dictionary = {}
 var known_stairs_seen: bool = false
 
+var rng: RandomNumberGenerator
+
 func _ready() -> void:
 	gfx = $Gfx
 	ui = $UI
@@ -60,6 +62,13 @@ func _ready() -> void:
 	auto_timer.wait_time = 0.12
 	add_child(auto_timer)
 	auto_timer.timeout.connect(_on_auto_timer_timeout)
+
+	# ★ 乱数器（Combat 等から参照される）
+	rng = RandomNumberGenerator.new()
+	if Params.RNG_SEED == 0:
+		rng.randomize()
+	else:
+		rng.seed = int(Params.RNG_SEED)
 
 	_generate()
 	FovUtil.update_fov(self)
@@ -104,20 +113,23 @@ func _generate() -> void:
 	for i in range(1, rooms.size()):
 		var p: Vector2i = rooms[i].get_center()
 		var fl: int = floor_level
-		var ehp: int = 5 + fl * 2
-		var eatk: int = 2 + int(floor(float(fl) * 0.5))
-		enemies.append({ "pos": p, "hp": ehp, "atk": eatk })
+		# ★ 敵の HP / ATK
+		var ehp: int = 8 + fl * 3
+		var eatk: int = 3 + int(ceil(float(fl) * 0.75))
+		# ★ 獲得経験値のベース値を 2 に
+		enemies.append({ "pos": p, "hp": ehp, "atk": eatk, "xp": 1 })
 
 	if rooms.size() > 1:
 		stairs = rooms[rooms.size() - 1].get_center()
 	else:
 		stairs = player + Vector2i(5, 0)
 
-	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	# ★ フロアごとのシード再設定（決定論的配置にする場合）
 	if Params.RNG_SEED == 0:
 		rng.randomize()
 	else:
 		rng.seed = int(Params.RNG_SEED + floor_level * 10007)
+
 	ItemSpawner.scatter_items_in_rooms(self, rng, 1, 3, 5)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -132,7 +144,18 @@ func _enemy_at(p: Vector2i) -> int:
 
 func _post_turn_update() -> void:
 	turn_count += 1
+
+	# 既存のターン効果
 	status.apply_turn_effects(turn_count)
+
+	# ★ 自然回復：5ターンごとに最大HPの5%回復（最低1）
+	if (turn_count % 5) == 0:
+		var heal_f: float = float(status.max_hp) * 0.05
+		var heal: int = int(ceil(heal_f))
+		if heal < 1:
+			heal = 1
+		status.hp = min(status.max_hp, status.hp + heal)
+
 	FovUtil.update_fov(self)
 	if (turn_count % Params.SPAWN_TRY_EVERY) == 0:
 		spawner.maybe_spawn()

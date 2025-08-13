@@ -1,126 +1,62 @@
-extends Object
+extends Node
 class_name ItemSpawner
 
+# 地面リセット
 static func reset_ground(inv: Inventory) -> void:
-	if inv != null:
-		inv.ground.clear()
+	inv.ground.clear()
 
-static func _is_cell_free(main: Main, p: Vector2i) -> bool:
-	if p.x < 0 or p.x >= Params.W or p.y < 0 or p.y >= Params.H:
-		return false
-	if (main.grid[p.y] as Array)[p.x] == 1:
-		return false
-	if p == main.player or p == main.stairs:
-		return false
-	for e in main.enemies:
-		var ep: Vector2i = e["pos"]
-		if ep == p:
-			return false
-	return true
+# 各部屋にアイテムをばら撒く
+static func scatter_items_in_rooms(main: Main, rng: RandomNumberGenerator, min_per_room: int, max_per_room: int, tries_per_room: int) -> void:
+	var rooms: Array = main.rooms
+	for i: int in range(rooms.size()):
+		var r: Rect2i = rooms[i]
+		var n: int = rng.randi_range(min_per_room, max_per_room)
+		for j: int in range(n):
+			var pos: Vector2i = _random_floor_in_room(main, rng, r, tries_per_room)
+			if pos.x == -1:
+				continue
+			var it: Dictionary = _roll_item(main.inv, rng)
+			main.inv.add_item_to_ground(pos, it)
 
-static func scatter_items_in_rooms(
-	main: Main,
-	rng: RandomNumberGenerator,
-	per_room_min: int,
-	per_room_max: int,
-	ensure_total_min: int
-) -> void:
-	if main.inv == null:
-		return
+# 敵撃破時ドロップ（確率 chance、ここでは 0.30 を想定）
+static func drop_item_with_chance(main: Main, rng: RandomNumberGenerator, pos: Vector2i, chance: float) -> void:
+	var roll: float = rng.randf()
+	if roll < chance:
+		var it: Dictionary = _roll_item(main.inv, rng)
+		main.inv.add_item_to_ground(pos, it)
 
-	var total: int = 0
-	for i: int in main.rooms.size():
-		var r: Rect2i = main.rooms[i]
-		var count: int = rng.randi_range(per_room_min, per_room_max)
-		for _j: int in count:
-			var tries: int = 48
-			var placed: bool = false
-			while tries > 0 and not placed:
-				var x: int = rng.randi_range(r.position.x, r.position.x + r.size.x - 1)
-				var y: int = rng.randi_range(r.position.y, r.position.y + r.size.y - 1)
-				tries -= 1
-				if y < 0 or y >= Params.H or x < 0 or x >= Params.W:
-					continue
-				var rid_row: Array = main.room_id[y]
-				if int(rid_row[x]) < 0:
-					continue
-				var p: Vector2i = Vector2i(x, y)
-				if not ItemSpawner._is_cell_free(main, p):
-					continue
+# 部屋内の床セルをランダムに選ぶ
+static func _random_floor_in_room(main: Main, rng: RandomNumberGenerator, rect: Rect2i, tries: int) -> Vector2i:
+	var count: int = max(1, tries)
+	for _k: int in range(count):
+		var x: int = rng.randi_range(rect.position.x, rect.position.x + rect.size.x - 1)
+		var y: int = rng.randi_range(rect.position.y, rect.position.y + rect.size.y - 1)
+		if x < 0 or y < 0 or x >= Params.W or y >= Params.H:
+			continue
+		var row: Array = main.grid[y]
+		if int(row[x]) == 0:
+			return Vector2i(x, y)
+	return Vector2i(-1, -1)
 
-				# 配分（合計100%）
-				#  0-13 : 薬草 (14%)
-				# 14-27 : おにぎり (14%)
-				# 28-39 : 木の剣 (12%)
-				# 40-47 : 木の盾 (8%)
-				# 48-65 : 袋 (18%)
-				# 66-83 : 強化のシール (18%)
-				# 84-93 : 拡張のシール (10%)
-				# 94-99 : 合成の袋 (6%)
-				var roll: int = rng.randi_range(0, 99)
-				var it: Dictionary = {}
-				if roll < 14:
-					it = main.inv.create_herb()
-				elif roll < 28:
-					it = main.inv.create_onigiri()
-				elif roll < 40:
-					it = main.inv.create_wood_sword(rng.randi_range(0, 2))
-				elif roll < 48:
-					it = main.inv.create_wood_shield(rng.randi_range(0, 2))
-				elif roll < 66:
-					it = main.inv.create_pouch()
-				elif roll < 84:
-					it = main.inv.create_enhance_seal()
-				elif roll < 94:
-					it = main.inv.create_expand_seal()
-				else:
-					it = main.inv.create_fusion_pouch()
-
-				main.inv.add_item_to_ground(p, it)
-				total += 1
-				placed = true
-
-	if total < ensure_total_min and main.rooms.size() > 0:
-		var need: int = ensure_total_min - total
-		var r0: Rect2i = main.rooms[0]
-		for k: int in need:
-			var x2: int = clamp(r0.get_center().x + ((k % 3) - 1), 0, Params.W - 1)
-			var y2: int = clamp(r0.get_center().y + int(k / 3) - 1, 0, Params.H - 1)
-			var p2: Vector2i = Vector2i(x2, y2)
-			if ItemSpawner._is_cell_free(main, p2):
-				main.inv.add_item_to_ground(p2, main.inv.create_herb())
-
-# ★ 追加：敵撃破時ドロップ
-static func drop_from_enemy(main: Main, rng: RandomNumberGenerator, pos: Vector2i) -> void:
-	# 低確率（10%）でドロップ
-	var r: RandomNumberGenerator = rng
-	if r == null:
-		r = RandomNumberGenerator.new()
-		r.randomize()
-	var chance: int = r.randi_range(0, 99)
-	if chance >= 10:
-		return
-
-	# ドロップ内容（軽め寄り）
-	#  0-39 : 薬草 (40%)
-	# 40-64 : おにぎり (25%)
-	# 65-79 : 強化のシール (15%)
-	# 80-89 : 袋 (10%)
-	# 90-95 : 拡張のシール (6%)
-	# 96-99 : 合成の袋 (4%)
-	var roll: int = r.randi_range(0, 99)
-	var it: Dictionary = {}
-	if roll < 40:
-		it = main.inv.create_herb()
-	elif roll < 65:
-		it = main.inv.create_onigiri()
-	elif roll < 80:
-		it = main.inv.create_enhance_seal()
-	elif roll < 90:
-		it = main.inv.create_pouch()
-	elif roll < 96:
-		it = main.inv.create_expand_seal()
+# ランダムアイテム生成（家具も出現）
+static func _roll_item(inv: Inventory, rng: RandomNumberGenerator) -> Dictionary:
+	var p: float = rng.randf()
+	# ざっくり配分：家具10%、袋各10%、封印各10%、武器/盾/回復/食料など
+	if p < 0.10:
+		return inv.create_furniture()
+	elif p < 0.20:
+		return inv.create_pouch()
+	elif p < 0.30:
+		return inv.create_fusion_pouch()
+	elif p < 0.40:
+		return inv.create_enhance_seal()
+	elif p < 0.50:
+		return inv.create_expand_seal()
+	elif p < 0.65:
+		return inv.create_wood_sword(0)
+	elif p < 0.80:
+		return inv.create_wood_shield(0)
+	elif p < 0.90:
+		return inv.create_onigiri()
 	else:
-		it = main.inv.create_fusion_pouch()
-
-	main.inv.add_item_to_ground(pos, it)
+		return inv.create_herb()

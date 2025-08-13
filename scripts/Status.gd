@@ -39,10 +39,17 @@ func apply_turn_effects(turn_count: int) -> void:
 		if belly > 0:
 			belly = max(0, belly - 1)
 
-# --- レベルアップ ---
+# --- レベルアップ関連 ---
 func _xp_required(lv: int) -> int:
-	# 早めに上がる軽めのテーブル
-	return 5 * lv
+	# 必要経験値を従来の2倍に
+	return 10 * lv
+
+func get_xp_to_next() -> int:
+	var need: int = _xp_required(level)
+	var rem: int = need - xp
+	if rem < 0:
+		rem = 0
+	return rem
 
 func gain_xp(amount: int) -> void:
 	if amount <= 0:

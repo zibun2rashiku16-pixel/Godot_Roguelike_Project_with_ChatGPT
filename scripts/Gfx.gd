@@ -43,7 +43,7 @@ func _update_layout_cache() -> void:
 		reserved = main.ui.get_reserved_height()
 	var avail_h: float = max(0.0, vp.y - float(reserved))
 	var tile_fit_w: float = vp.x / float(Params.W)
-	var tile_fit_h: float = (avail_h) / float(Params.H)
+	var tile_fit_h: float = avail_h / float(Params.H)
 	var tile: int = int(floor(min(tile_fit_w, tile_fit_h)))
 	if tile < 8:
 		tile = 8
@@ -59,7 +59,7 @@ func _process(delta: float) -> void:
 	if flash_player > 0.0:
 		flash_player = max(0.0, flash_player - delta)
 		dirty = true
-	for i in range(flash_cells.size() - 1, -1, -1):
+	for i: int in range(flash_cells.size() - 1, -1, -1):
 		var e: Dictionary = flash_cells[i]
 		var t: float = float(e["t"]) - delta
 		if t <= 0.0:
@@ -69,7 +69,7 @@ func _process(delta: float) -> void:
 			e["t"] = t
 			flash_cells[i] = e
 			dirty = true
-	for i in range(damage_numbers.size() - 1, -1, -1):
+	for i: int in range(damage_numbers.size() - 1, -1, -1):
 		var d: Dictionary = damage_numbers[i]
 		d["t"] = float(d.get("t", 0.0)) + delta
 		if float(d["t"]) >= float(d.get("dur", 0.7)):
@@ -79,7 +79,7 @@ func _process(delta: float) -> void:
 			damage_numbers[i] = d
 			dirty = true
 	# レベルアップFX
-	for i2 in range(level_fx.size() - 1, -1, -1):
+	for i2: int in range(level_fx.size() - 1, -1, -1):
 		var fx: Dictionary = level_fx[i2]
 		fx["t"] = float(fx.get("t", 0.0)) + delta
 		if float(fx["t"]) >= float(fx.get("dur", 0.9)):
@@ -225,10 +225,10 @@ func _draw() -> void:
 		draw_arc(center, r1, 0.0, TAU, 48, col_fx, 3.0, true)
 		draw_arc(center, r2, 0.0, TAU, 48, col_fx, 2.0, true)
 		draw_arc(center, r3, 0.0, TAU, 48, col_fx, 1.0, true)
-	# ...既存の地形/キャラ描画...
+
+	# 8方向ガイド
 	if show_guides:
 		_draw_guides()
-
 
 func _item_color(tname: String, alpha: float) -> Color:
 	var col: Color = Color(0.8, 0.8, 0.8, alpha)
@@ -274,7 +274,7 @@ func clear_effects() -> void:
 	set_process(false)
 	queue_redraw()
 
-# 追記：ガイド本体
+# 8方向ガイド（壁に関わらず、最大5マス先まで／より細く・より透明）
 func _draw_guides() -> void:
 	if main == null:
 		return
@@ -289,11 +289,12 @@ func _draw_guides() -> void:
 	var cell: float = floor(min(vp.x / float(Params.W), usable_h / float(Params.H)))
 	if cell <= 0.0:
 		return
+
 	# 横は中央寄せ、縦は上詰め（UIを下に避ける）
 	var ox: float = floor((vp.x - cell * float(Params.W)) * 0.5)
 	var oy: float = 0.0
 
-	# プレイヤー中心
+	# プレイヤー中心（ピクセル座標）
 	var pc: Vector2 = Vector2(
 		ox + (float(main.player.x) + 0.5) * cell,
 		oy + (float(main.player.y) + 0.5) * cell
@@ -306,22 +307,20 @@ func _draw_guides() -> void:
 		Vector2i(-1,  1), Vector2i(0,  1), Vector2i(1,  1)
 	]
 
-	var col: Color = Color(1.0, 0.8, 0.2, 0.85)
-	var w: float = max(1.0, cell * 0.08)
+	# より透明な色・より細い線
+	var col: Color = Color(1.0, 0.8, 0.2, 0.25)
+	var w: float = max(0.5, cell * 0.05)
 
 	for d: Vector2i in dirs:
 		var last: Vector2i = main.player
-		var p: Vector2i = main.player
-		while true:
-			var nx: int = p.x + d.x
-			var ny: int = p.y + d.y
+		# 壁に関わらず、最大5マスまで進める（マップ外は停止）
+		for step: int in range(5):
+			var nx: int = last.x + d.x
+			var ny: int = last.y + d.y
 			if nx < 0 or ny < 0 or nx >= Params.W or ny >= Params.H:
 				break
-			var row: Array = main.grid[ny]        # 0:床, 1:壁 を想定
-			if int(row[nx]) == 1:
-				break
 			last = Vector2i(nx, ny)
-			p = last
+
 		var ec: Vector2 = Vector2(
 			ox + (float(last.x) + 0.5) * cell,
 			oy + (float(last.y) + 0.5) * cell
