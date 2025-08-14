@@ -160,9 +160,9 @@ static func _roll_item(rng: RandomNumberGenerator) -> Dictionary:
 	elif r < 0.45:
 		return _mk_food()
 	elif r < 0.61:
-		return _mk_weapon()
+		return _mk_weapon(rng) # ★剣：+0～+2を付与し、名称に反映
 	elif r < 0.75:
-		return _mk_shield()
+		return _mk_shield(rng) # ★盾：+0～+2を付与し、名称に反映
 	elif r < 0.83:
 		return _mk_seal()
 	elif r < 0.88:
@@ -183,24 +183,30 @@ static func _mk_food() -> Dictionary:
 	d["size"] = Vector2i(1, 1)
 	return d
 
-static func _mk_weapon() -> Dictionary:
+static func _mk_weapon(rng: RandomNumberGenerator) -> Dictionary:
+	# 木の剣（1x3）、+0～+2 をランダム付与 → 名称にも +値を付与
 	var d: Dictionary = {}
 	d["type"] = "weapon"
-	d["name"] = "木の剣"
+	var plus: int = rng.randi_range(0, 2) # ★ランダム修正値
+	var nm: String = "木の剣+" + str(plus)
+	d["name"] = nm
 	d["size_w"] = 1
 	d["size_h"] = 3
 	d["size"] = Vector2i(1, 3)
-	d["plus"] = 0
+	d["plus"] = plus
 	return d
 
-static func _mk_shield() -> Dictionary:
+static func _mk_shield(rng: RandomNumberGenerator) -> Dictionary:
+	# 木の盾（2x2）、+0～+2 をランダム付与 → 名称にも +値を付与
 	var d: Dictionary = {}
 	d["type"] = "shield"
-	d["name"] = "木の盾"
+	var plus: int = rng.randi_range(0, 2) # ★ランダム修正値
+	var nm: String = "木の盾+" + str(plus)
+	d["name"] = nm
 	d["size_w"] = 2
 	d["size_h"] = 2
 	d["size"] = Vector2i(2, 2)
-	d["plus"] = 0
+	d["plus"] = plus
 	return d
 
 static func _mk_seal() -> Dictionary:

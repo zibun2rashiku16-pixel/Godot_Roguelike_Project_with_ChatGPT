@@ -77,6 +77,14 @@ const G_OFFSETS: Array = [
 	Vector2i(-1,  1), Vector2i(0,  1), Vector2i(1,  1)
 ]
 
+# アクションID（固定）
+const ID_USE: int = 21
+const ID_MOVE: int = 22
+const ID_DETAIL: int = 23
+const ID_GROUND_MOVE: int = 11
+const ID_GROUND_DETAIL: int = 12
+const ID_CLOSE: int = 0
+
 # ラベル用の黒
 const COL_BLACK: Color = Color(0, 0, 0, 1)
 
@@ -177,23 +185,18 @@ func _ready() -> void:
 	_build_pouch_buttons()
 	pouch_panel.visible = false
 
-	# ポップアップ（順序：拾う→移動→詳細）
+	# ポップアップ（ground は「拾う」を置かない）
 	popup_ground = PopupMenu.new()
 	overlay.add_child(popup_ground)
-	popup_ground.add_item("拾う", 10)   # ★追加：足元→バッグに自動収納
-	popup_ground.add_item("移動", 11)
-	popup_ground.add_item("詳細", 12)
+	popup_ground.add_item("移動", ID_GROUND_MOVE)
+	popup_ground.add_item("詳細", ID_GROUND_DETAIL)
 	popup_ground.add_separator()
-	popup_ground.add_item("閉じる", 0)
+	popup_ground.add_item("閉じる", ID_CLOSE)
 	popup_ground.add_theme_font_size_override("font_size", 28)
 
 	popup_bag = PopupMenu.new()
 	overlay.add_child(popup_bag)
-	popup_bag.add_item("移動", 22)
-	popup_bag.add_item("使う", 21)
-	popup_bag.add_item("詳細", 23)
-	popup_bag.add_separator()
-	popup_bag.add_item("閉じる", 0)
+	# 動的に再構築するため、初期は空でも良い
 	popup_bag.add_theme_font_size_override("font_size", 28)
 
 	popup_equip = PopupMenu.new()
@@ -201,16 +204,12 @@ func _ready() -> void:
 	popup_equip.add_item("詳細", 31)
 	popup_equip.add_item("外す", 32)
 	popup_equip.add_separator()
-	popup_equip.add_item("閉じる", 0)
+	popup_equip.add_item("閉じる", ID_CLOSE)
 	popup_equip.add_theme_font_size_override("font_size", 28)
 
 	popup_pouch = PopupMenu.new()
 	overlay.add_child(popup_pouch)
-	popup_pouch.add_item("移動", 41)
-	popup_pouch.add_item("使う", 43)
-	popup_pouch.add_item("詳細", 42)
-	popup_pouch.add_separator()
-	popup_pouch.add_item("閉じる", 0)
+	# 動的に再構築するため、初期は空でも良い
 	popup_pouch.add_theme_font_size_override("font_size", 28)
 
 	popup_ground.id_pressed.connect(_on_ground_popup_id)
@@ -242,41 +241,44 @@ func _make_panel_style(alpha: float) -> StyleBoxFlat:
 	return sb
 
 func _init_highlight_styles() -> void:
-	sb_btn_highlight = StyleBoxFlat.new()
-	sb_btn_highlight.bg_color = Color(1.0, 0.96, 0.60, 0.85)
-	sb_btn_highlight.border_color = Color(0.25, 0.25, 0.00, 0.90)
-	sb_btn_highlight.border_width_left = 2
-	sb_btn_highlight.border_width_top = 2
-	sb_btn_highlight.border_width_right = 2
-	sb_btn_highlight.border_width_bottom = 2
-	sb_btn_highlight.corner_radius_top_left = 6
-	sb_btn_highlight.corner_radius_top_right = 6
-	sb_btn_highlight.corner_radius_bottom_left = 6
-	sb_btn_highlight.corner_radius_bottom_right = 6
+	var s0: StyleBoxFlat = StyleBoxFlat.new()
+	s0.bg_color = Color(1.0, 0.96, 0.60, 0.85)
+	s0.border_color = Color(0.25, 0.25, 0.00, 0.90)
+	s0.border_width_left = 2
+	s0.border_width_top = 2
+	s0.border_width_right = 2
+	s0.border_width_bottom = 2
+	s0.corner_radius_top_left = 6
+	s0.corner_radius_top_right = 6
+	s0.corner_radius_bottom_left = 6
+	s0.corner_radius_bottom_right = 6
+	sb_btn_highlight = s0
 
-	sb_btn_highlight_hover = StyleBoxFlat.new()
-	sb_btn_highlight_hover.bg_color = Color(1.00, 0.98, 0.70, 0.90)
-	sb_btn_highlight_hover.border_color = Color(0.30, 0.30, 0.00, 0.95)
-	sb_btn_highlight_hover.border_width_left = 2
-	sb_btn_highlight_hover.border_width_top = 2
-	sb_btn_highlight_hover.border_width_right = 2
-	sb_btn_highlight_hover.border_width_bottom = 2
-	sb_btn_highlight_hover.corner_radius_top_left = 6
-	sb_btn_highlight_hover.corner_radius_top_right = 6
-	sb_btn_highlight_hover.corner_radius_bottom_left = 6
-	sb_btn_highlight_hover.corner_radius_bottom_right = 6
+	var s1: StyleBoxFlat = StyleBoxFlat.new()
+	s1.bg_color = Color(1.00, 0.98, 0.70, 0.90)
+	s1.border_color = Color(0.30, 0.30, 0.00, 0.95)
+	s1.border_width_left = 2
+	s1.border_width_top = 2
+	s1.border_width_right = 2
+	s1.border_width_bottom = 2
+	s1.corner_radius_top_left = 6
+	s1.corner_radius_top_right = 6
+	s1.corner_radius_bottom_left = 6
+	s1.corner_radius_bottom_right = 6
+	sb_btn_highlight_hover = s1
 
-	sb_btn_highlight_pressed = StyleBoxFlat.new()
-	sb_btn_highlight_pressed.bg_color = Color(0.95, 0.88, 0.50, 0.95)
-	sb_btn_highlight_pressed.border_color = Color(0.20, 0.20, 0.00, 1.00)
-	sb_btn_highlight_pressed.border_width_left = 2
-	sb_btn_highlight_pressed.border_width_top = 2
-	sb_btn_highlight_pressed.border_width_right = 2
-	sb_btn_highlight_pressed.border_width_bottom = 2
-	sb_btn_highlight_pressed.corner_radius_top_left = 6
-	sb_btn_highlight_pressed.corner_radius_top_right = 6
-	sb_btn_highlight_pressed.corner_radius_bottom_left = 6
-	sb_btn_highlight_pressed.corner_radius_bottom_right = 6
+	var s2: StyleBoxFlat = StyleBoxFlat.new()
+	s2.bg_color = Color(0.95, 0.88, 0.50, 0.95)
+	s2.border_color = Color(0.20, 0.20, 0.00, 1.00)
+	s2.border_width_left = 2
+	s2.border_width_top = 2
+	s2.border_width_right = 2
+	s2.border_width_bottom = 2
+	s2.corner_radius_top_left = 6
+	s2.corner_radius_top_right = 6
+	s2.corner_radius_bottom_left = 6
+	s2.corner_radius_bottom_right = 6
+	sb_btn_highlight_pressed = s2
 
 func toggle() -> void:
 	visible = not visible
@@ -561,7 +563,32 @@ func _update_pouch_visibility() -> void:
 	ground_panel.visible = not pouch_open
 	_layout_absolute()
 
+#-------------------------------------
+# ポップアップ再構築（必要な項目のみを出す）
+#-------------------------------------
+func _rebuild_bag_popup(show_use: bool) -> void:
+	popup_bag.clear()
+	# ★順序：移動 → 使う → 詳細 → 閉じる
+	popup_bag.add_item("移動", ID_MOVE)
+	if show_use:
+		popup_bag.add_item("使う", ID_USE)
+	popup_bag.add_item("詳細", ID_DETAIL)
+	popup_bag.add_separator()
+	popup_bag.add_item("閉じる", ID_CLOSE)
+
+func _rebuild_pouch_popup(show_use: bool) -> void:
+	popup_pouch.clear()
+	# ★順序：移動 → 使う → 詳細 → 閉じる
+	popup_pouch.add_item("移動", ID_MOVE)
+	if show_use:
+		popup_pouch.add_item("使う", ID_USE)
+	popup_pouch.add_item("詳細", ID_DETAIL)
+	popup_pouch.add_separator()
+	popup_pouch.add_item("閉じる", ID_CLOSE)
+
+#-------------------------------------
 # 足元：タップ
+#-------------------------------------
 func _on_ground_pressed(b: Button) -> void:
 	var cell: Vector2i = Vector2i(int(b.get_meta("cx")), int(b.get_meta("cy")))
 	var idv: int = int(b.get_meta("id"))
@@ -593,7 +620,7 @@ func _on_ground_pressed(b: Button) -> void:
 	if enhancing:
 		return
 
-	# ★修正ポイント：idv が -1（メタ未設定）でも、セルにアイテムがあれば取得してメニューを開く
+	# id 未設定でもセルにアイテムがあれば補完してメニューを開く
 	if idv == -1:
 		var arr: Array = inv.get_ground_items_at(cell)
 		if arr.size() > 0:
@@ -604,33 +631,19 @@ func _on_ground_pressed(b: Button) -> void:
 		else:
 			return
 
-	# ここまで来れば ground にアイテムがあるのでメニューを開く
+	# ground は「移動」「詳細」のみ（★拾うは無し）
 	ground_popup_item_id = idv
 	ground_popup_cell = cell
 	var gp: Vector2 = get_viewport().get_mouse_position()
 	popup_ground.popup(Rect2i(Vector2i(int(gp.x), int(gp.y)), Vector2i(1, 1)))
 
 func _on_ground_popup_id(id: int) -> void:
-	if id == 10:
-		# ★ 「拾う」= 足元 → バッグ（入れば1ターン経過）
-		var picked: Dictionary = inv.take_item_from_ground(ground_popup_cell, ground_popup_item_id)
-		if picked.is_empty():
-			_show_info("その場所には拾えるものがありません。")
-			return
-		var ok_put: bool = inv.place_item_in_bag(picked)
-		if ok_put:
-			_refresh_all()
-			if main != null:
-				main._post_turn_update()
-		else:
-			inv.add_item_to_ground(ground_popup_cell, picked)
-			_show_info("バッグに空きがありません。")
-	elif id == 11:
+	if id == ID_GROUND_MOVE:
 		moving = true
 		moving_src_kind = "ground"
 		moving_item_id = ground_popup_item_id
 		moving_src_ground_cell = ground_popup_cell
-	elif id == 12:
+	elif id == ID_GROUND_DETAIL:
 		var txt: String = "不明なアイテム"
 		var arr: Array = inv.get_ground_items_at(ground_popup_cell)
 		if arr.size() > 0:
@@ -665,7 +678,9 @@ func _on_ground_popup_id(id: int) -> void:
 		dlg.add_child(lb)
 		dlg.popup_centered()
 
+#-------------------------------------
 # 持ち物：タップ
+#-------------------------------------
 func _on_bag_pressed(b: Button) -> void:
 	var x: int = int(b.get_meta("x"))
 	var y: int = int(b.get_meta("y"))
@@ -734,23 +749,23 @@ func _on_bag_pressed(b: Button) -> void:
 		return
 	bag_popup_item_id = idv
 
-	var enable_use: bool = false
+	# ★「使う」を出す条件（バッグのみ）：
+	#  食料/薬草/シール/拡張/袋/合成袋 に加え、剣/盾も "バッグにある場合のみ" 表示する
+	var show_use: bool = false
 	if inv.bag_items.has(idv):
 		var it_bag: Dictionary = inv.bag_items[idv]
 		var t2: String = it_bag.get("type", "")
-		if t2 == "potion" or t2 == "food" or t2 == "weapon" or t2 == "shield" or t2 == "pouch" or t2 == "pouch_fusion" or t2 == "seal" or t2 == "seal_expand":
-			enable_use = true
+		if t2 == "potion" or t2 == "food" or t2 == "pouch" or t2 == "pouch_fusion" or t2 == "seal" or t2 == "seal_expand" or t2 == "weapon" or t2 == "shield":
+			show_use = true
 
-	var use_index: int = popup_bag.get_item_index(21)
-	if use_index >= 0:
-		popup_bag.set_item_disabled(use_index, not enable_use)
-
+	# メニューを再構築して表示（★順序は「移動 → 使う → 詳細」）
+	_rebuild_bag_popup(show_use)
 	var gp: Vector2 = get_viewport().get_mouse_position()
 	popup_bag.popup(Rect2i(Vector2i(int(gp.x), int(gp.y)), Vector2i(1, 1)))
 
 func _on_bag_popup_id(id: int) -> void:
-	if id == 21:
-		# 使う
+	if id == ID_USE:
+		# 使う：バッグからの使用（装備はここで装備になる）
 		if inv.bag_items.has(bag_popup_item_id):
 			var t: String = String(inv.bag_items[bag_popup_item_id].get("type",""))
 			if t == "seal":
@@ -771,12 +786,11 @@ func _on_bag_popup_id(id: int) -> void:
 			_refresh_all()
 			if inv.last_use_consumed_turn and main != null:
 				main._post_turn_update()
-	elif id == 22:
-		# 移動
+	elif id == ID_MOVE:
 		moving = true
 		moving_src_kind = "bag"
 		moving_item_id = bag_popup_item_id
-	elif id == 23:
+	elif id == ID_DETAIL:
 		var txt: String = "不明なアイテム"
 		if inv.bag_items.has(bag_popup_item_id):
 			var it: Dictionary = inv.bag_items[bag_popup_item_id]
@@ -832,7 +846,9 @@ func _on_bag_popup_id(id: int) -> void:
 		dlg.add_child(lb)
 		dlg.popup_centered()
 
+#-------------------------------------
 # 袋：タップ
+#-------------------------------------
 func _on_pouch_pressed(b: Button) -> void:
 	if not pouch_open:
 		return
@@ -895,27 +911,32 @@ func _on_pouch_pressed(b: Button) -> void:
 	pouch_popup_item_id = idv
 	pouch_popup_pos = Vector2i(x, y)
 
-	# 「使う」の有効/無効をIDで制御
-	var enable_use: bool = true
+	# 袋メニュー：「使う」を出すのは 食料/薬草/シール/拡張/袋/合成袋 のみ（★装備は出さない）
+	var show_use: bool = true
 	if inv != null and inv.pouches.has(pouch_open_id):
 		var items: Dictionary = inv.pouches[pouch_open_id]["items"]
 		if items.has(idv):
 			var t: String = String(items[idv].get("type",""))
-			enable_use = (t == "potion" or t == "food" or t == "weapon" or t == "shield" or t == "seal" or t == "seal_expand")
-	var idx_use: int = popup_pouch.get_item_index(43)
-	if idx_use >= 0:
-		popup_pouch.set_item_disabled(idx_use, not enable_use)
+			show_use = (t == "potion" or t == "food" or t == "seal" or t == "seal_expand" or t == "pouch" or t == "pouch_fusion")
+			# 合成の袋で合成後ロック中のアイテムは常に「使う」を出さない
+			var c: Dictionary = inv.pouches[pouch_open_id]
+			var locked: bool = bool(c.get("fusion_locked", false))
+			var locked_id: int = int(c.get("fusion_locked_item", -1))
+			if locked and locked_id == idv:
+				show_use = false
 
+	# メニューを再構築して表示（★順序は「移動 → 使う → 詳細」）
+	_rebuild_pouch_popup(show_use)
 	var gp: Vector2 = get_viewport().get_mouse_position()
 	popup_pouch.popup(Rect2i(Vector2i(int(gp.x), int(gp.y)), Vector2i(1, 1)))
 
 func _on_pouch_popup_id(id: int) -> void:
-	if id == 41:
+	if id == ID_MOVE:
 		moving = true
 		moving_src_kind = "pouch"
 		moving_item_id = pouch_popup_item_id
 		moving_src_pouch_id = pouch_open_id
-	elif id == 42:
+	elif id == ID_DETAIL:
 		var txt: String = "不明なアイテム"
 		if inv != null and inv.pouches.has(pouch_open_id):
 			var items: Dictionary = inv.pouches[pouch_open_id]["items"]
@@ -960,21 +981,21 @@ func _on_pouch_popup_id(id: int) -> void:
 		lb.autowrap_mode = TextServer.AUTOWRAP_WORD
 		dlg.add_child(lb)
 		dlg.popup_centered()
-	elif id == 43:
-		# 使う（袋から）
+	elif id == ID_USE:
+		# 使う（装備や合成ロック時にはメニュー自体が出ない想定）
 		if inv != null and inv.pouches.has(pouch_open_id):
-			var items: Dictionary = inv.pouches[pouch_open_id]["items"]
-			if items.has(pouch_popup_item_id):
-				var t: String = String(items[pouch_popup_item_id].get("type",""))
-				if t == "seal":
+			var items2: Dictionary = inv.pouches[pouch_open_id]["items"]
+			if items2.has(pouch_popup_item_id):
+				var t2: String = String(items2[pouch_popup_item_id].get("type",""))
+				if t2 == "seal":
 					enhancing = true
 					enhance_from = "pouch"
 					enhancing_seal_id = pouch_popup_item_id
 					enhancing_seal_from_pouch_id = pouch_open_id
 					return
-				elif t == "seal_expand":
-					var okx: bool = inv.apply_expand_from_pouch(pouch_open_id, pouch_popup_item_id)
-					if okx:
+				elif t2 == "seal_expand":
+					var okx2: bool = inv.apply_expand_from_pouch(pouch_open_id, pouch_popup_item_id)
+					if okx2:
 						_refresh_all()
 						if inv.last_use_consumed_turn and main != null:
 							main._post_turn_update()
@@ -986,7 +1007,9 @@ func _on_pouch_popup_id(id: int) -> void:
 			if inv.last_use_consumed_turn and main != null:
 				main._post_turn_update()
 
+#-------------------------------------
 # 装備欄：タップ
+#-------------------------------------
 func _on_equip_button(slot: String) -> void:
 	equip_popup_slot = slot
 	var has_item: bool = false
@@ -1024,7 +1047,9 @@ func _on_equip_popup_id(id: int) -> void:
 			_show_info("バッグに空きがありません。")
 		_refresh_all()
 
+#-------------------------------------
 # 袋トグル通知
+#-------------------------------------
 func _on_pouch_toggled(open: bool, id: int) -> void:
 	pouch_open = open
 	pouch_open_id = id
@@ -1032,7 +1057,9 @@ func _on_pouch_toggled(open: bool, id: int) -> void:
 	_refresh_pouch_grid()
 	_refresh_bag_grid() # ★ 開いている袋のハイライトを更新
 
+#-------------------------------------
 # モード終了
+#-------------------------------------
 func _end_move_success() -> void:
 	_refresh_all()
 	if main != null:
@@ -1056,7 +1083,9 @@ func _cancel_enhance_mode() -> void:
 	enhancing_seal_id = -1
 	enhancing_seal_from_pouch_id = -1
 
+#-------------------------------------
 # ユーティリティ
+#-------------------------------------
 func _show_info(text: String) -> void:
 	var dlg: AcceptDialog = AcceptDialog.new()
 	overlay.add_child(dlg)
