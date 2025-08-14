@@ -565,6 +565,8 @@ func _update_pouch_visibility() -> void:
 func _on_ground_pressed(b: Button) -> void:
 	var cell: Vector2i = Vector2i(int(b.get_meta("cx")), int(b.get_meta("cy")))
 	var idv: int = int(b.get_meta("id"))
+
+	# 移動モード：移動元に応じて足元へドロップ
 	if moving:
 		if moving_src_kind == "bag":
 			var dropped: Dictionary = inv.remove_item_from_bag(moving_item_id)
@@ -587,11 +589,22 @@ func _on_ground_pressed(b: Button) -> void:
 		_end_move_fail("その場所へは移動できません。")
 		return
 
+	# 強化選択中は無視（持ち物と同様）
 	if enhancing:
 		return
 
+	# ★修正ポイント：idv が -1（メタ未設定）でも、セルにアイテムがあれば取得してメニューを開く
 	if idv == -1:
-		return
+		var arr: Array = inv.get_ground_items_at(cell)
+		if arr.size() > 0:
+			var it2: Dictionary = arr[0]
+			idv = int(it2.get("id", -1))
+			if idv == -1:
+				return
+		else:
+			return
+
+	# ここまで来れば ground にアイテムがあるのでメニューを開く
 	ground_popup_item_id = idv
 	ground_popup_cell = cell
 	var gp: Vector2 = get_viewport().get_mouse_position()
@@ -599,7 +612,7 @@ func _on_ground_pressed(b: Button) -> void:
 
 func _on_ground_popup_id(id: int) -> void:
 	if id == 10:
-		# ★ 追加：「拾う」= 足元 → バッグ（入れば1ターン経過）
+		# ★ 「拾う」= 足元 → バッグ（入れば1ターン経過）
 		var picked: Dictionary = inv.take_item_from_ground(ground_popup_cell, ground_popup_item_id)
 		if picked.is_empty():
 			_show_info("その場所には拾えるものがありません。")
