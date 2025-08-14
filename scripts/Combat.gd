@@ -3,93 +3,51 @@ class_name Combat
 
 var main: Main
 
-# --- 内部ユーティリティ ---
-func _enemy_index_at(pos: Vector2i) -> int:
-	for i: int in range(main.enemies.size()):
-		var e: Dictionary = main.enemies[i]
-		var ep: Vector2i = e.get("pos", Vector2i(-1, -1))
-		if ep == pos:
-			return i
-	return -1
-
-func _is_adjacent_8(a: Vector2i, b: Vector2i) -> bool:
-	var dx: int = abs(a.x - b.x)
-	var dy: int = abs(a.y - b.y)
-	return dx <= 1 and dy <= 1 and (dx != 0 or dy != 0)
-
-# プレイヤーが敵 idx を攻撃。行動消費なら true。
 func player_attack(idx: int) -> bool:
 	if main == null:
 		return false
 	if idx < 0 or idx >= main.enemies.size():
 		return false
-
 	var e: Dictionary = main.enemies[idx]
-	var pos: Vector2i = e.get("pos", Vector2i.ZERO)
-
-	var base_dmg: int = max(1, int(main.status.atk))
-	var jitter: int = 0
-	if main.rng != null:
-		jitter = int(round(main.rng.randf_range(-0.5, 0.5)))
-	var dmg: int = max(1, base_dmg + jitter)
-
+	var ep: Vector2i = e["pos"]
+	var dmg: int = _calc_player_damage()
 	e["hp"] = int(e.get("hp", 1)) - dmg
-	main.gfx.add_damage_number(pos, dmg)
-
-	# 撃破処理
-	if int(e["hp"]) <= 0:
+	if main.gfx != null:
+		main.gfx.add_damage_number(ep, dmg)
+		main.gfx.add_flash_cell(ep)
+	var dead: bool = int(e["hp"]) <= 0
+	if dead:
 		var xp_gain: int = int(e.get("xp", 1))
 		main.status.gain_xp(xp_gain)
+		# 互換性のため、既存の drop_loot を呼ぶ（30%ドロップ）
+		ItemSpawner.drop_loot(main, ep, main.rng)
 		main.enemies.remove_at(idx)
-		# 撃破ドロップ：30%
-		if main.rng != null:
-			ItemSpawner.drop_item_with_chance(main, main.rng, pos, 0.30)
-		main.recalc_memory_visible()
-		return true
-
-	# 生存していれば即時反撃（8方向隣接を許可）
-	if _is_adjacent_8(pos, main.player):
-		enemy_attack_player(idx)
-
-	# HP 反映（辞書は参照だが明示更新）
-	main.enemies[idx] = e
+	else:
+		main.enemies[idx] = e
 	return true
 
-# 互換用エントリ：引数の型に応じて攻撃
-# - int       : 敵インデックス
-# - Vector2i  : 敵の座標
-# - Dictionary: {pos: Vector2i, ...} を想定
-func enemy_attack(arg: Variant) -> bool:
+func enemy_attack(eidx: int) -> bool:
 	if main == null:
 		return false
-	var idx: int = -1
-	var t: int = typeof(arg)
-	if t == TYPE_INT:
-		idx = int(arg)
-	elif t == TYPE_VECTOR2I:
-		idx = _enemy_index_at(arg)
-	elif t == TYPE_DICTIONARY:
-		var d: Dictionary = arg
-		var p: Vector2i = d.get("pos", Vector2i(-1, -1))
-		idx = _enemy_index_at(p)
-	if idx < 0 or idx >= main.enemies.size():
+	if eidx < 0 or eidx >= main.enemies.size():
 		return false
-	enemy_attack_player(idx)
-	return true
-
-# 敵からプレイヤーへの攻撃
-func enemy_attack_player(idx: int) -> void:
-	if main == null:
-		return
-	if idx < 0 or idx >= main.enemies.size():
-		return
-	var e: Dictionary = main.enemies[idx]
-	var atk: int = int(e.get("atk", 1))
-	var jitter: int = 0
-	if main.rng != null:
-		jitter = int(round(main.rng.randf_range(-0.5, 0.5)))
-	var dmg: int = max(1, atk + jitter)
+	var e: Dictionary = main.enemies[eidx]
+	var dmg: int = _calc_enemy_damage(e)
 	main.status.hp = max(0, main.status.hp - dmg)
-	main.gfx.add_damage_number(main.player, dmg)
-	# ステータス変更の都度 UI 更新を通知
-	main.status.stats_changed.emit()
+	if main.gfx != null:
+		main.gfx.add_damage_number(main.player, dmg)
+		main.gfx.flash_player_now()
+	return true
+
+func _calc_player_damage() -> int:
+	var base: int = main.status.atk
+	if base < 1:
+		base = 1
+	return base
+
+func _calc_enemy_damage(e: Dictionary) -> int:
+	var atk: int = int(e.get("atk", 1))
+	var dmg: int = atk - main.status.def
+	if dmg < 1:
+		dmg = 1
+	return dmg

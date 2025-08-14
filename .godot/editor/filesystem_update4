@@ -1,4 +1,2 @@
 res://scenes/Main.tscn
-res://scripts/AutoNav.gd
-res://scripts/Main.gd
-res://scripts/UI.gd
+res://scripts/InventoryUI.gd

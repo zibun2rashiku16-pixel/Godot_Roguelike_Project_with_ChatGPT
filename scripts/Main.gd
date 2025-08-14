@@ -117,7 +117,6 @@ func _generate() -> void:
 		var p: Vector2i = rooms[i].get_center()
 		var fl: int = floor_level
 		var ehp: int = 8 + fl * 3
-		# ★ 敵ATKを 1 下げる
 		var eatk: int = 2 + int(ceil(float(fl) * 0.75))
 		enemies.append({ "pos": p, "hp": ehp, "atk": eatk, "xp": 1 })
 
@@ -134,7 +133,6 @@ func _generate() -> void:
 	ItemSpawner.scatter_items_in_rooms(self, rng, 1, 3, 5)
 
 	auto_nav.reset_for_new_floor()
-	# 自動拾い無視フラグはフロア生成時にクリア
 	auto_ignore_items = false
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -151,7 +149,6 @@ func _post_turn_update() -> void:
 	turn_count += 1
 	status.apply_turn_effects(turn_count)
 
-	# 自然回復：5ターンごとに最大HPの5%回復（最低1）
 	if (turn_count % 5) == 0:
 		var heal_f: float = float(status.max_hp) * 0.05
 		var heal: int = int(ceil(heal_f))
@@ -192,7 +189,6 @@ func set_auto_mode(t: bool) -> void:
 		auto_timer.start()
 	else:
 		auto_timer.stop()
-		# ユーザーが自動を解除したら、以降の自動拾い無視を解除
 		auto_ignore_items = false
 
 func _on_auto_timer_timeout() -> void:
@@ -204,7 +200,6 @@ func _on_auto_timer_timeout() -> void:
 		auto_timer.stop()
 
 func show_menu_popup() -> void:
-	# UI 側でポップアップを表示する実装に移行
 	pass
 
 func recalc_memory_visible() -> void:

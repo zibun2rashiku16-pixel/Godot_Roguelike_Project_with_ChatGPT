@@ -177,9 +177,10 @@ func _ready() -> void:
 	_build_pouch_buttons()
 	pouch_panel.visible = false
 
-	# ポップアップ（順序：移動→使う→詳細）
+	# ポップアップ（順序：拾う→移動→詳細）
 	popup_ground = PopupMenu.new()
 	overlay.add_child(popup_ground)
+	popup_ground.add_item("拾う", 10)   # ★追加：足元→バッグに自動収納
 	popup_ground.add_item("移動", 11)
 	popup_ground.add_item("詳細", 12)
 	popup_ground.add_separator()
@@ -497,7 +498,6 @@ func _refresh_bag_grid() -> void:
 					b_open.add_theme_stylebox_override("normal", sb_btn_highlight)
 					b_open.add_theme_stylebox_override("hover", sb_btn_highlight_hover)
 					b_open.add_theme_stylebox_override("pressed", sb_btn_highlight_pressed)
-					# 「先頭セル」以外（占有エリア内の他セル）は disable のままでOK
 					break
 
 func _refresh_pouch_grid() -> void:
@@ -598,7 +598,21 @@ func _on_ground_pressed(b: Button) -> void:
 	popup_ground.popup(Rect2i(Vector2i(int(gp.x), int(gp.y)), Vector2i(1, 1)))
 
 func _on_ground_popup_id(id: int) -> void:
-	if id == 11:
+	if id == 10:
+		# ★ 追加：「拾う」= 足元 → バッグ（入れば1ターン経過）
+		var picked: Dictionary = inv.take_item_from_ground(ground_popup_cell, ground_popup_item_id)
+		if picked.is_empty():
+			_show_info("その場所には拾えるものがありません。")
+			return
+		var ok_put: bool = inv.place_item_in_bag(picked)
+		if ok_put:
+			_refresh_all()
+			if main != null:
+				main._post_turn_update()
+		else:
+			inv.add_item_to_ground(ground_popup_cell, picked)
+			_show_info("バッグに空きがありません。")
+	elif id == 11:
 		moving = true
 		moving_src_kind = "ground"
 		moving_item_id = ground_popup_item_id
