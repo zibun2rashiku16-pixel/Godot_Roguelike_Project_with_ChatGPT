@@ -1,0 +1,24 @@
+[gd_scene load_steps=6 format=3 uid="uid://cuov1ug6d168x"]
+
+[ext_resource type="Script" uid="uid://dudwcpj6ju43a" path="res://scripts/Main.gd" id="1"]
+[ext_resource type="Script" uid="uid://20aqj4uyu3ey" path="res://scripts/Gfx.gd" id="2"]
+[ext_resource type="Script" uid="uid://djwbv0qvfvm3y" path="res://scripts/UI.gd" id="3"]
+[ext_resource type="Script" uid="uid://dgib2apvpbdrt" path="res://scripts/Spawner.gd" id="4"]
+[ext_resource type="Script" uid="uid://b7daxcttqg4b4" path="res://scripts/Combat.gd" id="5"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1")
+
+[node name="Gfx" type="Node2D" parent="."]
+script = ExtResource("2")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("3")
+
+[node name="Spawner" type="Node" parent="."]
+script = ExtResource("4")
+
+[node name="Combat" type="Node" parent="."]
+script = ExtResource("5")

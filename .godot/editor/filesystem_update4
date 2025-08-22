@@ -1,4 +1,3 @@
 res://scenes/Main.tscn
-res://scripts/InventoryUI.gd
+res://scripts/AutoNav.gd
 res://scripts/ItemSpawner.gd
-res://scripts/Combat.gd
